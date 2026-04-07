@@ -1,0 +1,58 @@
+workflowExternalId: wf_icapi_data_pipeline
+version: '1'
+workflowDefinition:
+  tasks:
+  - externalId: create_asset_hierarchy_task
+    type: transformation
+    parameters:
+      transformation:
+        externalId: create_asset_hierarchy
+        concurrencyPolicy: fail
+    name: 'Task One - Create Asset Hierarchy'
+    description: Create the asset hierarchy in Cognite Data Fusion based on the data model defined in the transformation.
+    retries: 3
+    timeout: 3600
+    onFailure: abortWorkflow
+    dependsOn: []
+
+  - externalId: contextualize_ts_assets_task
+    type: transformation
+    parameters:
+      transformation:
+        externalId: contextualize_ts_assets
+        concurrencyPolicy: fail
+    name: 'Task two - Contextualize TimeSeries and Assets'
+    description: Contextualize the time series and assets in Cognite Data Fusion based on the data model defined in the transformation.
+    retries: 3
+    timeout: 3600
+    onFailure: abortWorkflow
+    dependsOn:
+      - externalId: create_asset_hierarchy_task
+
+  - externalId: icapi_datapoints_extractor_task
+    type: function
+    parameters:
+      function:
+        externalId: icapi_datapoints_extractor
+        data: { "hours": 1 }
+    name: 'Task three - Extract DataPoints'
+    description: Extract data points from the Ice Cream API based on the specified time range.
+    retries: 3
+    timeout: 3600
+    onFailure: abortWorkflow
+    dependsOn:
+      - externalId: contextualize_ts_assets_task
+
+  - externalId: oee_timeseries_extractor_task
+    type: function
+    parameters:
+      function:
+        externalId: oee_timeseries
+        data: { "hours": 1 }
+    name: 'Task four - Extract OEE TimeSeries'
+    description: Extract OEE time series data from the Ice Cream API based on the specified time range.
+    retries: 3
+    timeout: 3600
+    onFailure: abortWorkflow
+    dependsOn:
+      - externalId: icapi_datapoints_extractor_task
